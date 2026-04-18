@@ -12,33 +12,26 @@ const Dashboard = () => {
   });
 
   // BƯỚC 1: KẾT NỐI API BACKEND
-  useEffect(() => {
-    // Kịch bản 1: KHI BACKEND CHƯA CHẠY 
-    // Mình tạm nạp dữ liệu này vào để bạn xem cái giao diện AI nó đẹp như thế nào trước nhé
-    setMetrics({
-      velocity: 45,
-      avgCycleTime: 3.52,
-      avgLeadTime: 4.65,
-      sprintHealth: "CÓ RỦI RO", // Thêm chỉ số sức khỏe tổng thể
-      tasks: [
-        { id: '#2256', title: '[BUG] Crash with install', sp: 3, leadTime: 0.60, cycleTime: 0.10, aiRisk: 'Low' },
-        { id: '#2249', title: '[DOCS]', sp: 2, leadTime: 1.32, cycleTime: 0.32, aiRisk: 'Low' },
-        { id: '#2246', title: 'Change the language for LLM...', sp: 5, leadTime: 2.38, cycleTime: 1.38, aiRisk: 'Low' },
-        { id: '#2239', title: '[BUG] when install bmad...', sp: 8, leadTime: 2.94, cycleTime: 4.94, aiRisk: 'High' },
-        { id: '#2232', title: '[BUG] ships an invalid...', sp: 13, leadTime: 4.32, cycleTime: 5.32, aiRisk: 'High' }
-      ]
-    });
-
-    /* // Kịch bản 2: KHI BACKEND PYTHON ĐÃ CHẠY (Thành viên C làm xong API)
-    // Bạn xóa đoạn setMetrics giả ở trên đi, và bỏ // ở đoạn code dưới đây ra:
-    
+useEffect(() => {
+    // 1. Gọi người bồi bàn (fetch) đến địa chỉ của nhà bếp Python
     fetch('http://localhost:8000/api/metrics')
-      .then(res => res.json())
-      .then(data => {
-        setMetrics(data);
+      .then(res => {
+        if (!res.ok) throw new Error("Lỗi mạng");
+        return res.json(); // Nhận cục dữ liệu JSON
       })
-      .catch(err => console.error("Lỗi gọi API:", err));
-    */
+      .then(data => {
+        // 2. Nếu lấy thành công, đổ toàn bộ số liệu THẬT vào giao diện
+        if(data.error) {
+           console.error("Lỗi từ Backend:", data.error);
+        } else {
+           setMetrics(data); 
+        }
+      })
+      .catch(err => {
+        console.error("Lỗi gọi API:", err);
+        // Hiển thị tạm chữ LỖI nếu chưa bật file Python
+        setMetrics(prev => ({ ...prev, sprintHealth: "LỖI KẾT NỐI API" }));
+      });
   }, []);
 
   return (

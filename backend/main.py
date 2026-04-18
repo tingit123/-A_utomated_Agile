@@ -68,10 +68,9 @@ async def get_agile_metrics():
             if risk_model:
                 # Đưa thông số vào AI (Cycle Time, Story Points, Bug)
                 prediction = risk_model.predict([[cycle_time, sp, bug_count]])
-                if prediction[0] == 1:  # 1 nghĩa là AI dự báo sẽ trễ/rủi ro cao
+                if prediction[0] == 1:
                     ai_risk = "High"
 
-            # Đóng gói dữ liệu chuẩn bị gửi cho React
             tasks.append({
                 "id": f"#{issue['number']}",
                 "title": issue['title'],
@@ -93,8 +92,6 @@ async def get_agile_metrics():
     # Tính "Sức khỏe Sprint": Nếu quá 30% task bị AI báo High Risk -> CẢNH BÁO
     high_risk_tasks = df[df['aiRisk'] == 'High'].shape[0]
     sprint_health = "CÓ RỦI RO" if (high_risk_tasks / len(df)) > 0.3 else "AN TOÀN"
-
-    # Trả về cục JSON khớp 100% với giao diện React
     return {
         "velocity": total_velocity,
         "avgCycleTime": round(avg_cycle, 2),
