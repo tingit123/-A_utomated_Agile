@@ -20,6 +20,9 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Thêm state quản lý giới hạn hiển thị
+  const [limits, setLimits] = useState({ todo: 10, inProgress: 10, done: 10 });
+
   const [metrics, setMetrics] = useState({
     velocity: 0, avgCycleTime: 0, avgLeadTime: 0, teamProductivity: 0, sprintHealth: "CHƯA CÓ DỮ LIỆU",
     burndownData: [], tasksPerDay: [], tasks: [],
@@ -40,6 +43,8 @@ const Dashboard = () => {
       if (!response.ok) throw new Error("Lỗi kết nối Backend Python.");
       const data = await response.json();
       setMetrics(data);
+      // Reset lại số lượng hiển thị khi load dự án mới
+      setLimits({ todo: 10, inProgress: 10, done: 10 });
     } catch (err) {
       setError(err.message);
     } finally { setLoading(false); }
@@ -66,6 +71,13 @@ const Dashboard = () => {
     );
   };
 
+  // Dữ liệu mặc định để biểu đồ luôn hiện khung trống ban đầu
+  const defaultBurndown = [{ date: 'Chưa kết nối', tasksRemaining: 0, tasksClosed: 0 }];
+  const defaultTasksPerDay = [{ date: 'Chưa kết nối', completed: 0 }];
+
+  const chartBurndownData = metrics.burndownData.length > 0 ? metrics.burndownData : defaultBurndown;
+  const chartTasksPerDayData = metrics.tasksPerDay.length > 0 ? metrics.tasksPerDay : defaultTasksPerDay;
+
   return (
     <div className="app-layout">
       <aside className="sidebar">
@@ -85,7 +97,7 @@ const Dashboard = () => {
             placeholder="Dán link GitHub (VD: https://github.com/bmad-code-org/BMAD-METHOD)..."
           />
           <button className="btn-fetch" onClick={handleFetchMetrics} disabled={loading}>
-            {loading ? "Đang lấy dữ liệu (Hơi lâu)..." : "Kết nối Dữ liệu"}
+            {loading ? "Đang kết nối..." : "Kết nối Dữ liệu"}
           </button>
         </header>
 
@@ -107,54 +119,68 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* ĐÃ TỐI ƯU HIỂN THỊ TRỤC X BẰNG minTickGap={20} ĐỂ CHỮ KHÔNG ĐÈ LÊN NHAU */}
-          {metrics.burndownData.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-              <div className="chart-box">
-                <h3>📉 BIỂU ĐỒ BURNDOWN (TỔNG QUAN)</h3>
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={metrics.burndownData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis dataKey="date" minTickGap={20} tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#CBD5E1' }} />
-                    <YAxis tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                    <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                    <Line type="monotone" dataKey="tasksRemaining" name="Tasks Còn Lại" stroke="#EF4444" strokeWidth={2} dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="tasksClosed" name="Tasks Đã Đóng" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="chart-box">
-                <h3>📈 BIỂU ĐỒ NĂNG SUẤT</h3>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={metrics.tasksPerDay} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis dataKey="date" minTickGap={20} tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#CBD5E1' }} />
-                    <YAxis tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                    <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                    <Bar dataKey="completed" name="Hoàn Thành" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+          {/* KHU VỰC BIỂU ĐỒ (LUÔN HIỂN THỊ) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+            <div className="chart-box">
+              <h3>📉 BIỂU ĐỒ BURNDOWN</h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={chartBurndownData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                  <XAxis dataKey="date" minTickGap={20} tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#CBD5E1' }} />
+                  <YAxis tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+                  <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                  <Line type="monotone" dataKey="tasksRemaining" name="Tasks Còn Lại" stroke="#EF4444" strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="tasksClosed" name="Tasks Đã Đóng" stroke="#10B981" strokeWidth={2} dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-          )}
 
+            <div className="chart-box">
+              <h3>📈 NĂNG SUẤT HÀNG NGÀY</h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={chartTasksPerDayData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                  <XAxis dataKey="date" minTickGap={20} tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#CBD5E1' }} />
+                  <YAxis tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+                  <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                  <Bar dataKey="completed" name="Hoàn Thành" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* BẢNG KANBAN CÓ NÚT XEM THÊM */}
           <div className="kanban-grid">
             <div className="kanban-col">
               <div className="col-header header-todo">CHƯA LÀM (TO DO) <span className="task-count">{metrics.kanban.todo.length}</span></div>
-              {metrics.kanban.todo.map(t => <TaskCard key={t.id} task={t} />)}
+              {metrics.kanban.todo.slice(0, limits.todo).map(t => <TaskCard key={t.id} task={t} />)}
+              {metrics.kanban.todo.length > limits.todo && (
+                <button className="btn-load-more" onClick={() => setLimits({ ...limits, todo: limits.todo + 30 })}>
+                  ▼ Xem thêm 30 task
+                </button>
+              )}
             </div>
 
             <div className="kanban-col">
               <div className="col-header header-progress">ĐANG LÀM (IN PROGRESS) <span className="task-count">{metrics.kanban.inProgress.length}</span></div>
-              {metrics.kanban.inProgress.map(t => <TaskCard key={t.id} task={t} />)}
+              {metrics.kanban.inProgress.slice(0, limits.inProgress).map(t => <TaskCard key={t.id} task={t} />)}
+              {metrics.kanban.inProgress.length > limits.inProgress && (
+                <button className="btn-load-more" onClick={() => setLimits({ ...limits, inProgress: limits.inProgress + 30 })}>
+                  ▼ Xem thêm 30 task
+                </button>
+              )}
             </div>
 
             <div className="kanban-col">
               <div className="col-header header-done">HOÀN THÀNH (DONE) <span className="task-count">{metrics.kanban.done.length}</span></div>
-              {metrics.kanban.done.map(t => <TaskCard key={t.id} task={t} />)}
+              {metrics.kanban.done.slice(0, limits.done).map(t => <TaskCard key={t.id} task={t} />)}
+              {metrics.kanban.done.length > limits.done && (
+                <button className="btn-load-more" onClick={() => setLimits({ ...limits, done: limits.done + 30 })}>
+                  ▼ Xem thêm 30 task
+                </button>
+              )}
             </div>
           </div>
 
@@ -172,7 +198,7 @@ const Dashboard = () => {
               </thead>
               <tbody>
                 {metrics.tasks.length > 0 ? (
-                  metrics.tasks.map((task, index) => (
+                  metrics.tasks.slice(0, 15).map((task, index) => (
                     <tr key={index} style={{ borderBottom: '1px solid #F1F5F9' }}>
                       <td style={{ padding: '16px', fontWeight: 'bold', color: '#3B82F6' }}>{task.id}</td>
                       <td style={{ padding: '16px', fontWeight: '500', color: '#1E293B' }}>{task.title}</td>
