@@ -9,6 +9,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // GIỮ NGUYÊN 100% STATE TỪ CODE CỦA BẠN
   const [metrics, setMetrics] = useState({
     velocity: 0,
     avgCycleTime: 0,
@@ -20,6 +21,7 @@ const Dashboard = () => {
     tasks: []
   });
 
+  // GIỮ NGUYÊN 100% LOGIC GỌI API CỦA BẠN
   const handleFetchMetrics = async () => {
     if (!repoUrl) {
       setError("Vui lòng dán link GitHub vào ô trống.");
@@ -58,251 +60,215 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="container">
-      <h1>🎯 BÁO CÁO AGILE TỰ ĐỘNG (KÈM AI)</h1>
+    <div className="app-layout">
 
-      {/* THANH NHẬP LINK GITHUB */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '25px' }}>
-        <input
-          type="text"
-          value={repoUrl}
-          onChange={(e) => setRepoUrl(e.target.value)}
-          placeholder="Dán link GitHub vào đây (VD: https://github.com/facebook/react)"
-          style={{ width: '450px', padding: '10px 15px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '15px' }}
-        />
-        <button
-          onClick={handleFetchMetrics}
-          disabled={loading}
-          style={{
-            padding: '10px 20px', backgroundColor: loading ? '#6c757d' : '#007bff',
-            color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
-          }}
-        >
-          {loading ? "Đang tính toán..." : "Phân tích số liệu"}
-        </button>
-      </div>
+      {/* SIDEBAR BÊN TRÁI - GIAO DIỆN JIRA */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">🚀 Agile<span>Pro</span></div>
+        <ul className="sidebar-menu">
+          <li className="active">📊 Dashboard Tổng Hợp</li>
+          <li>📉 Biểu đồ Burndown</li>
+          <li>📈 Năng suất Team</li>
+          <li>📋 Chi tiết Nhiệm vụ</li>
+        </ul>
+      </aside>
 
-      {/* Hiển thị lỗi nếu có */}
-      {error && <div style={{ color: '#dc3545', textAlign: 'center', marginBottom: '20px', fontWeight: '500' }}>⚠️ {error}</div>}
+      {/* NỘI DUNG CHÍNH BÊN PHẢI */}
+      <main className="main-content">
 
-      {/* ========== CÁC THẺ CHỈ SỐ TỔNG HỢP (STATS CARDS) ========== */}
-      <h2 style={{ textAlign: 'left', marginTop: '30px', marginBottom: '15px', fontSize: '18px', fontWeight: '600' }}>
-        📊 Chỉ Số Agile (Week 3 - Measurement Model)
-      </h2>
-      <div className="stats-grid">
-        <div className="stat-card">
-          <h3>💪 VẬN TỐC</h3>
-          <p>{metrics.velocity} SP</p>
-          <small style={{ color: '#666', marginTop: '8px' }}>Story Points/Sprint</small>
-        </div>
-        <div className="stat-card">
-          <h3>⏱️ CYCLE TIME</h3>
-          <p>{metrics.avgCycleTime} ngày</p>
-          <small style={{ color: '#666', marginTop: '8px' }}>Trung bình (ngày)</small>
-        </div>
-        <div className="stat-card">
-          <h3>⌛ LEAD TIME</h3>
-          <p>{metrics.avgLeadTime} ngày</p>
-          <small style={{ color: '#666', marginTop: '8px' }}>Trung bình (ngày)</small>
-        </div>
-        <div className="stat-card">
-          <h3>🚀 TEAM PRODUCTIVITY</h3>
-          <p>{metrics.teamProductivity} tasks/ngày</p>
-          <small style={{ color: '#666', marginTop: '8px' }}>Tasks per Day</small>
-        </div>
-        <div className="stat-card" style={{ backgroundColor: metrics.sprintHealth === "CÓ RỦI RO" ? '#ffeeba' : '#d4edda' }}>
-          <h3>🤖 SỨC KHỎE SPRINT (AI)</h3>
-          <p style={{ color: metrics.sprintHealth === "CÓ RỦI RO" ? '#dc3545' : '#28a745', fontWeight: 'bold' }}>
-            {metrics.sprintHealth}
-          </p>
-          <small style={{ color: '#666', marginTop: '8px' }}>AI Prediction</small>
-        </div>
-      </div>
+        {/* THANH TÌM KIẾM TRÊN CÙNG (TOPBAR) */}
+        <header className="topbar">
+          <input
+            className="repo-input"
+            type="text"
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
+            placeholder="Dán link GitHub vào đây (VD: https://github.com/facebook/react)..."
+          />
+          <button className="btn-fetch" onClick={handleFetchMetrics} disabled={loading}>
+            {loading ? "Đang tính toán..." : "Phân tích số liệu"}
+          </button>
+        </header>
 
-      {/* ========== BURNDOWN CHART ========== */}
-      {metrics.burndownData.length > 0 && (
-        <div style={{ marginTop: '40px' }}>
-          <h2 style={{ textAlign: 'left', marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>
-            📉 Biểu Đồ Burndown (Sprint Progress)
+        {/* KHU VỰC HIỂN THỊ DỮ LIỆU */}
+        <div className="board-container">
+          <h2 className="project-title">
+            Báo cáo Agile: {repoUrl ? repoUrl.split('/').pop().replace('.git', '') : 'Chưa có dự án'}
           </h2>
-          <div style={{ backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '10px' }}>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={metrics.burndownData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis label={{ value: 'Tasks Remaining', angle: -90, position: 'insideLeft' }} />
-                <Tooltip formatter={(value) => value} />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="tasksRemaining" 
-                  stroke="#dc3545" 
-                  strokeWidth={2}
-                  name="📊 Tasks Còn Lại"
-                  dot={{ fill: '#dc3545', r: 4 }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="tasksClosed" 
-                  stroke="#28a745" 
-                  strokeWidth={2}
-                  name="✅ Tasks Đóng/Ngày"
-                  dot={{ fill: '#28a745', r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+
+          {error && <div className="error-msg">⚠️ {error}</div>}
+
+          {/* 5 Ô CHỈ SỐ NHANH (STAT PILLS) */}
+          <div className="quick-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px' }}>
+            <div className="stat-pill">
+              <span>💪 VẬN TỐC (SP)</span>
+              <strong>{metrics.velocity}</strong>
+            </div>
+            <div className="stat-pill">
+              <span>⏱️ CYCLE TIME</span>
+              <strong>{metrics.avgCycleTime} ngày</strong>
+            </div>
+            <div className="stat-pill">
+              <span>⌛ LEAD TIME</span>
+              <strong>{metrics.avgLeadTime} ngày</strong>
+            </div>
+            <div className="stat-pill">
+              <span>🚀 TEAM PRODUCTIVITY</span>
+              <strong>{metrics.teamProductivity} tasks/ngày</strong>
+            </div>
+            <div className="stat-pill" style={{ border: `2px solid ${metrics.sprintHealth === "AN TOÀN" ? '#10B981' : '#EF4444'}` }}>
+              <span>🤖 SỨC KHỎE (AI)</span>
+              <strong style={{ color: metrics.sprintHealth === "AN TOÀN" ? '#10B981' : '#EF4444' }}>
+                {metrics.sprintHealth}
+              </strong>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* ========== TEAM PRODUCTIVITY CHART ========== */}
-      {metrics.tasksPerDay.length > 0 && (
-        <div style={{ marginTop: '40px' }}>
-          <h2 style={{ textAlign: 'left', marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>
-            📈 Năng Suất Hàng Ngày (Daily Completion)
-          </h2>
-          <div style={{ backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '10px' }}>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={metrics.tasksPerDay}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date"
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis label={{ value: 'Tasks Completed', angle: -90, position: 'insideLeft' }} />
-                <Tooltip />
-                <Legend />
-                <Bar 
-                  dataKey="completed" 
-                  fill="#007bff"
-                  name="🎯 Tasks Hoàn Thành"
-                  radius={[8, 8, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+          {/* KHU VỰC BIỂU ĐỒ (BURNDOWN & BAR CHART) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '40px' }}>
+
+            {/* BURNDOWN CHART */}
+            {metrics.burndownData.length > 0 && (
+              <div style={{ background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginBottom: '20px' }}>📉 BIỂU ĐỒ BURNDOWN</h3>
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={metrics.burndownData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#CBD5E1' }} />
+                    <YAxis tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+                    <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                    <Line type="monotone" dataKey="tasksRemaining" name="Tasks Còn Lại" stroke="#EF4444" strokeWidth={3} dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="tasksClosed" name="Tasks Đóng/Ngày" stroke="#10B981" strokeWidth={3} dot={{ r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* TEAM PRODUCTIVITY CHART */}
+            {metrics.tasksPerDay.length > 0 && (
+              <div style={{ background: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginBottom: '20px' }}>📈 NĂNG SUẤT HÀNG NGÀY</h3>
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={metrics.tasksPerDay} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#CBD5E1' }} />
+                    <YAxis tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+                    <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                    <Bar dataKey="completed" name="Tasks Hoàn Thành" fill="#3B82F6" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
-        </div>
-      )}
 
-      {/* ========== TASKS PER DAY TABLE ========== */}
-      {metrics.tasksPerDay.length > 0 && (
-        <div style={{ marginTop: '30px' }}>
-          <h2 style={{ textAlign: 'left', marginBottom: '15px', fontSize: '18px', fontWeight: '600' }}>
-            📋 Chi Tiết Năng Suất Hàng Ngày
-          </h2>
-          <table>
-            <thead>
-              <tr>
-                <th>📅 Ngày</th>
-                <th>✅ Tasks Hoàn Thành</th>
-              </tr>
-            </thead>
-            <tbody>
-              {metrics.tasksPerDay.map((day, idx) => (
-                <tr key={idx}>
-                  <td>{day.date}</td>
-                  <td style={{ fontWeight: 'bold', color: '#007bff' }}>{day.completed}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+          {/* KHU VỰC CÁC BẢNG DỮ LIỆU */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '24px', marginBottom: '40px' }}>
 
-      {/* ========== BURNDOWN DATA TABLE ========== */}
-      {metrics.burndownData.length > 0 && (
-        <div style={{ marginTop: '30px' }}>
-          <h2 style={{ textAlign: 'left', marginBottom: '15px', fontSize: '18px', fontWeight: '600' }}>
-            📊 Dữ Liệu Burndown (Sprint Progress Details)
-          </h2>
-          <div style={{ overflowX: 'auto' }}>
-            <table>
-              <thead>
+            {/* BẢNG NĂNG SUẤT */}
+            {metrics.tasksPerDay.length > 0 && (
+              <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>
+                <div style={{ padding: '16px 20px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontWeight: '800', color: '#0F172A' }}>📋 CHI TIẾT NĂNG SUẤT</div>
+                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead style={{ position: 'sticky', top: 0, background: '#FFFFFF', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                      <tr>
+                        <th style={{ padding: '12px 20px', color: '#64748B', fontSize: '13px' }}>📅 Ngày</th>
+                        <th style={{ padding: '12px 20px', color: '#64748B', fontSize: '13px' }}>✅ Hoàn thành</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {metrics.tasksPerDay.map((day, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '12px 20px', fontSize: '14px' }}>{day.date}</td>
+                          <td style={{ padding: '12px 20px', fontSize: '14px', fontWeight: 'bold', color: '#3B82F6' }}>{day.completed}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* BẢNG BURNDOWN */}
+            {metrics.burndownData.length > 0 && (
+              <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>
+                <div style={{ padding: '16px 20px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontWeight: '800', color: '#0F172A', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>📊 DỮ LIỆU BURNDOWN</span>
+                  <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 'normal' }}>ℹ️ 14 ngày gần nhất</span>
+                </div>
+                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead style={{ position: 'sticky', top: 0, background: '#FFFFFF', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                      <tr>
+                        <th style={{ padding: '12px 20px', color: '#64748B', fontSize: '13px' }}>📅 Ngày</th>
+                        <th style={{ padding: '12px 20px', color: '#64748B', fontSize: '13px' }}>📊 Còn lại</th>
+                        <th style={{ padding: '12px 20px', color: '#64748B', fontSize: '13px' }}>✅ Đóng</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {metrics.burndownData.slice(-14).map((day, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '12px 20px', fontSize: '14px' }}>{day.date}</td>
+                          <td style={{ padding: '12px 20px', fontSize: '14px', fontWeight: 'bold', color: '#EF4444' }}>{day.tasksRemaining}</td>
+                          <td style={{ padding: '12px 20px', fontSize: '14px', fontWeight: 'bold', color: '#10B981' }}>{day.tasksClosed}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* BẢNG CHI TIẾT TASKS (DƯỚI CÙNG) */}
+          <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>
+            <div style={{ padding: '16px 20px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontWeight: '800', color: '#0F172A' }}>🔍 CHI TIẾT TỪNG TASK & DỰ BÁO AI</div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead style={{ background: '#FFFFFF' }}>
                 <tr>
-                  <th>📅 Ngày</th>
-                  <th>📊 Tasks Còn Lại</th>
-                  <th>✅ Tasks Đóng Trong Ngày</th>
+                  <th style={{ padding: '16px 20px', color: '#64748B', fontSize: '12px', textTransform: 'uppercase' }}>Mã Task</th>
+                  <th style={{ padding: '16px 20px', color: '#64748B', fontSize: '12px', textTransform: 'uppercase' }}>Tên Task</th>
+                  <th style={{ padding: '16px 20px', color: '#64748B', fontSize: '12px', textTransform: 'uppercase' }}>Story Points</th>
+                  <th style={{ padding: '16px 20px', color: '#64748B', fontSize: '12px', textTransform: 'uppercase' }}>Lead Time</th>
+                  <th style={{ padding: '16px 20px', color: '#64748B', fontSize: '12px', textTransform: 'uppercase' }}>Cycle Time</th>
+                  <th style={{ padding: '16px 20px', color: '#64748B', fontSize: '12px', textTransform: 'uppercase' }}>Dự báo AI</th>
                 </tr>
               </thead>
               <tbody>
-                {metrics.burndownData.slice(-14).map((day, idx) => (
-                  <tr key={idx}>
-                    <td>{day.date}</td>
-                    <td style={{ fontWeight: 'bold', color: '#dc3545' }}>{day.tasksRemaining}</td>
-                    <td style={{ fontWeight: 'bold', color: '#28a745' }}>{day.tasksClosed}</td>
+                {metrics.tasks.length > 0 ? (
+                  metrics.tasks.map((task, index) => (
+                    <tr key={index} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#F8FAFC'} onMouseOut={e => e.currentTarget.style.background = 'white'}>
+                      <td style={{ padding: '16px 20px', fontWeight: 'bold', color: '#3B82F6', fontSize: '14px' }}>{task.id}</td>
+                      <td style={{ padding: '16px 20px', fontSize: '14px', color: '#1E293B', fontWeight: '500' }}>{task.title}</td>
+                      <td style={{ padding: '16px 20px', fontSize: '14px' }}>
+                        <span style={{ background: '#F1F5F9', padding: '4px 8px', borderRadius: '12px', fontWeight: 'bold', color: '#475569' }}>{task.sp} SP</span>
+                      </td>
+                      <td style={{ padding: '16px 20px', fontSize: '14px', color: '#64748B' }}>{task.leadTime?.toFixed(2)} d</td>
+                      <td style={{ padding: '16px 20px', fontSize: '14px', color: '#64748B' }}>{task.cycleTime?.toFixed(2)} d</td>
+                      <td style={{ padding: '16px 20px' }}>
+                        {task.aiRisk === 'High' ? (
+                          <span style={{ background: '#FEE2E2', color: '#EF4444', padding: '6px 12px', borderRadius: '20px', fontWeight: '700', fontSize: '12px' }}>🔴 Nguy cơ trễ</span>
+                        ) : (
+                          <span style={{ background: '#DCFCE7', color: '#10B981', padding: '6px 12px', borderRadius: '20px', fontWeight: '700', fontSize: '12px' }}>🟢 An toàn</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#94A3B8', fontWeight: '500' }}>
+                      {loading ? "Đang xử lý dữ liệu từ GitHub..." : "Chưa có dữ liệu. Vui lòng kết nối dự án để phân tích."}
+                    </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
-          <small style={{ color: '#666', marginTop: '10px', display: 'block' }}>
-            ℹ️ Hiển thị 14 ngày gần nhất
-          </small>
-        </div>
-      )}
 
-      {/* ========== BẢNG CHI TIẾT TASKS ========== */}
-      <div style={{ marginTop: '30px' }}>
-        <h2 style={{ textAlign: 'left', marginBottom: '15px', fontSize: '18px', fontWeight: '600' }}>
-          🔍 Chi Tiết Từng Task (kèm AI Risk Prediction)
-        </h2>
-        <div className="table-section">
-          <table>
-            <thead>
-              <tr>
-                <th>Mã Task</th>
-                <th>Tên Task</th>
-                <th>Story Points</th>
-                <th>Lead Time (Ngày)</th>
-                <th>Cycle Time (Ngày)</th>
-                <th>AI Dự Báo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {metrics.tasks.length > 0 ? (
-                metrics.tasks.map((task, index) => (
-                  <tr key={index}>
-                    <td>{task.id}</td>
-                    <td>{task.title}</td>
-                    <td>{task.sp}</td>
-                    <td>{task.leadTime?.toFixed(2)}</td>
-                    <td>{task.cycleTime?.toFixed(2)}</td>
-                    <td>
-                      {task.aiRisk === 'High' ? (
-                        <span style={{ color: '#dc3545', fontWeight: 'bold' }}>🔴 Nguy cơ trễ</span>
-                      ) : (
-                        <span style={{ color: '#28a745', fontWeight: 'bold' }}>🟢 An toàn</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#666' }}>
-                    {loading ? "Đang xử lý dữ liệu từ GitHub..." : "Chưa có dữ liệu. Vui lòng dán link dự án để bắt đầu đo lường."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
-      </div>
-
-      {/* ========== FOOTER INFO ========== */}
-      <div style={{ marginTop: '40px', marginBottom: '40px', padding: '20px', backgroundColor: '#f0f0f0', borderRadius: '10px', textAlign: 'center', color: '#666' }}>
-        <small>
-          ✅ <strong>Week 3 + Visualization:</strong> Velocity | Cycle Time | Lead Time | Team Productivity | Burndown Chart | Daily Tasks Chart | AI Risk Prediction
-        </small>
-      </div>
+      </main>
     </div>
   );
 };

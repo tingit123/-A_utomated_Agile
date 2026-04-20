@@ -1,69 +1,377 @@
-/* Dashboard.css */
-body { 
-    font-family: 'Segoe UI', sans-serif; 
-    background-color: #f8f9fa; 
-    padding: 40px; 
+/* RESET MỌI THỨ VỀ CHUẨN */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
-.container { 
-    max-width: 1000px; 
-    margin: auto; 
-    background: white; 
-    padding: 20px; 
-    border-radius: 15px; 
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #F8FAFC;
+    color: #0F172A;
+    overflow: hidden;
 }
 
-h1 { 
-    color: #333; 
-    text-align: center; 
+/* KHUNG GIAO DIỆN CHÍNH */
+.app-layout {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    background-color: #F8FAFC;
+    text-align: left;
+    z-index: 9999;
 }
 
-.stats-grid { 
-    display: flex; 
-    gap: 20px; 
-    margin: 20px 0; 
+/* SIDEBAR BÊN TRÁI */
+.sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background-color: #0F172A;
+    color: #F8FAFC;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.15);
 }
 
-.stat-card { 
-    flex: 1; 
-    padding: 20px; 
-    background: #e9ecef; 
-    border-radius: 10px; 
-    text-align: center; 
+.sidebar-logo {
+    padding: 24px;
+    font-size: 22px;
+    font-weight: 800;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    letter-spacing: 0.5px;
 }
 
-.stat-card h3 { 
-    margin: 0; 
-    font-size: 14px; 
-    color: #666; 
+.sidebar-logo span {
+    color: #38BDF8;
 }
 
-.stat-card p { 
-    margin: 10px 0 0; 
-    font-size: 24px; 
-    font-weight: bold; 
-    color: #007bff; 
+.sidebar-menu {
+    list-style: none;
+    padding: 20px 0;
 }
 
-table { 
-    width: 100%; 
-    border-collapse: collapse; 
-    margin-top: 20px; 
+.sidebar-menu li {
+    padding: 16px 24px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    color: #94A3B8;
+    transition: all 0.2s;
 }
 
-th { 
-    background: #007bff; 
-    color: white; 
-    padding: 12px; 
-    text-align: left; 
+.sidebar-menu li:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: white;
 }
 
-td { 
-    padding: 12px; 
-    border-bottom: 1px solid #dee2e6; 
+.sidebar-menu li.active {
+    background-color: rgba(56, 189, 248, 0.1);
+    color: #38BDF8;
+    border-right: 4px solid #38BDF8;
 }
 
-tr:hover { 
-    background: #f1f1f1; 
+/* MAIN CONTENT */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #F8FAFC;
+    overflow: hidden;
+    min-width: 0;
+}
+
+/* TOPBAR */
+.topbar {
+    height: 80px;
+    flex-shrink: 0;
+    background-color: #FFFFFF;
+    border-bottom: 1px solid #E2E8F0;
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    gap: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.repo-input {
+    width: 500px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 2px solid #CBD5E1;
+    font-size: 15px;
+    background-color: #F8FAFC;
+    transition: all 0.2s;
+}
+
+.repo-input:focus {
+    border-color: #3B82F6;
+    outline: none;
+    background-color: #FFFFFF;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+.btn-fetch {
+    background-color: #3B82F6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.btn-fetch:hover {
+    background-color: #2563EB;
+}
+
+.btn-fetch:disabled {
+    background-color: #93C5FD;
+    cursor: not-allowed;
+}
+
+.sprint-filter {
+    margin-left: auto;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 2px solid #CBD5E1;
+    background-color: #FFFFFF;
+    font-weight: 700;
+    font-size: 15px;
+    color: #0F172A;
+    cursor: pointer;
+}
+
+/* BOARD CONTAINER */
+.board-container {
+    flex: 1;
+    padding: 32px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.project-title {
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 24px;
+    color: #0F172A;
+}
+
+/* QUICK STATS */
+.quick-stats {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 24px;
+    flex-wrap: nowrap;
+}
+
+.stat-pill {
+    flex: 1;
+    min-width: 0;
+    background: #FFFFFF;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.stat-pill span {
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748B;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stat-pill strong {
+    font-size: 26px;
+    color: #0F172A;
+    font-weight: 900;
+}
+
+/* CHART CONTAINER (Khu vực biểu đồ mới thêm) */
+.chart-container {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    margin-bottom: 32px;
+    height: 350px;
+    /* Chiều cao cố định cho biểu đồ */
+}
+
+.chart-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0F172A;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+/* KANBAN GRID */
+.kanban-grid {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    padding-bottom: 40px;
+    width: 100%;
+}
+
+.kanban-col {
+    flex: 1;
+    min-width: 0;
+    background-color: #F1F5F9;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 600px;
+    border: 1px solid #E2E8F0;
+}
+
+/* HEADER CỘT MÀU SẮC ĐẬM ĐÀ */
+.col-header {
+    font-size: 15px;
+    font-weight: 800;
+    color: white;
+    padding: 14px 18px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.header-todo {
+    background: linear-gradient(135deg, #3B82F6, #2563EB);
+}
+
+.header-progress {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+}
+
+.header-done {
+    background: linear-gradient(135deg, #10B981, #059669);
+}
+
+.task-count {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* TASK CARD */
+.task-card {
+    background-color: #FFFFFF;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    border: 1px solid #E2E8F0;
+    cursor: pointer;
+    transition: all 0.2s;
+    word-wrap: break-word;
+}
+
+.task-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    border-color: #CBD5E1;
+}
+
+.task-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.task-title {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1E293B;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.task-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.task-id {
+    font-size: 12px;
+    color: #64748B;
+    font-weight: 700;
+}
+
+.task-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.story-point {
+    background-color: #F1F5F9;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.assignee-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid #E2E8F0;
+}
+
+.btn-load-more {
+    background: white;
+    border: 1px solid #CBD5E1;
+    color: #475569;
+    font-weight: 700;
+    padding: 12px;
+    width: 100%;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.btn-load-more:hover {
+    background-color: #F8FAFC;
+    color: #0F172A;
+    border-color: #94A3B8;
+}
+
+.error-msg {
+    background-color: #FEF2F2;
+    color: #EF4444;
+    padding: 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    border: 1px solid #FECACA;
 }
