@@ -20,7 +20,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [activeTab, setActiveTab] = useState('board');
+  // Giới hạn hiển thị ban đầu
   const [limits, setLimits] = useState({ todo: 10, inProgress: 10, done: 10, table: 15 });
 
   const [metrics, setMetrics] = useState({
@@ -43,8 +43,8 @@ const Dashboard = () => {
       if (!response.ok) throw new Error("Lỗi kết nối Backend Python.");
       const data = await response.json();
       setMetrics(data);
+      // Reset lại số lượng hiển thị khi load dự án mới
       setLimits({ todo: 10, inProgress: 10, done: 10, table: 15 });
-      setActiveTab('board');
     } catch (err) {
       setError(err.message);
     } finally { setLoading(false); }
@@ -61,6 +61,7 @@ const Dashboard = () => {
         <span className="task-tag" style={{ backgroundColor: bg, color: color }}>{tag}</span>
         <p className="task-title">{cleanTitle}</p>
 
+        {/* HIỂN THỊ NLP */}
         <div style={{ marginTop: '6px', marginBottom: '10px', fontSize: '12px', fontWeight: '600', color: (task.nlpStatus?.includes('mơ hồ') || task.nlpStatus?.includes('ngắn') || task.nlpStatus?.includes('Trống')) ? '#EF4444' : '#10B981' }}>
           🤖 AI NLP: {task.nlpStatus || "Đang phân tích..."}
         </div>
@@ -84,12 +85,11 @@ const Dashboard = () => {
 
   return (
     <div className="app-layout">
+      {/* SIDEBAR TĨNH */}
       <aside className="sidebar">
         <div className="sidebar-logo">🚀 Agile<span>Pro</span></div>
         <ul className="sidebar-menu">
-          <li className={activeTab === 'board' ? 'active' : ''} onClick={() => setActiveTab('board')}>📊 Bảng Kanban (Board)</li>
-          <li className={activeTab === 'burndown' ? 'active' : ''} onClick={() => setActiveTab('burndown')}>📉 Biểu đồ Burndown</li>
-          <li className={activeTab === 'productivity' ? 'active' : ''} onClick={() => setActiveTab('productivity')}>📈 Năng suất Team</li>
+          <li className="active">📊 Dashboard Tổng Hợp</li>
         </ul>
       </aside>
 
@@ -110,6 +110,7 @@ const Dashboard = () => {
 
           {error && <div className="error-msg">⚠️ {error}</div>}
 
+          {/* 1. QUICKS STATS */}
           <div className="quick-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)' }}>
             <div className="stat-pill"><span>VẬN TỐC (VELOCITY)</span><strong>{metrics.velocity} SP</strong></div>
             <div className="stat-pill"><span>CYCLE TIME TRUNG BÌNH</span><strong>{metrics.avgCycleTime} ngày</strong></div>
@@ -123,100 +124,98 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {activeTab === 'burndown' && (
-            <div className="chart-box" style={{ height: '600px' }}>
-              <h3>📉 BIỂU ĐỒ BURNDOWN (TỔNG QUAN DỰ ÁN)</h3>
-              <ResponsiveContainer width="100%" height="90%">
-                <LineChart data={chartBurndownData} margin={{ top: 20, right: 30, left: 0, bottom: 10 }}>
+          {/* 2. KHU VỰC BIỂU ĐỒ NẰM NGANG NHAU TRÊN CÙNG MỘT TRANG */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '40px' }}>
+            <div className="chart-box">
+              <h3>📉 BIỂU ĐỒ BURNDOWN</h3>
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={chartBurndownData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                   <XAxis dataKey="date" minTickGap={30} tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#CBD5E1' }} />
                   <YAxis tick={{ fontSize: 13, fill: '#64748B' }} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                  <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '14px' }} />
+                  <Legend wrapperStyle={{ paddingTop: '10px' }} />
                   <Line type="monotone" dataKey="tasksRemaining" name="Tasks Còn Lại" stroke="#EF4444" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                   <Line type="monotone" dataKey="tasksClosed" name="Tasks Đã Đóng" stroke="#10B981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          )}
 
-          {activeTab === 'productivity' && (
-            <div className="chart-box" style={{ height: '600px' }}>
+            <div className="chart-box">
               <h3>📈 NĂNG SUẤT HÀNG NGÀY</h3>
-              <ResponsiveContainer width="100%" height="90%">
-                <BarChart data={chartTasksPerDayData} margin={{ top: 20, right: 30, left: 0, bottom: 10 }}>
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={chartTasksPerDayData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                   <XAxis dataKey="date" minTickGap={30} tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#CBD5E1' }} />
                   <YAxis tick={{ fontSize: 13, fill: '#64748B' }} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                  <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '14px' }} />
+                  <Legend wrapperStyle={{ paddingTop: '10px' }} />
                   <Bar dataKey="completed" name="Task Hoàn Thành" fill="#3B82F6" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          )}
+          </div>
 
-          {activeTab === 'board' && (
-            <>
-              <div className="kanban-grid">
-                <div className="kanban-col">
-                  <div className="col-header header-todo">CHƯA LÀM (TO DO) <span className="task-count">{metrics.kanban.todo.length}</span></div>
-                  {metrics.kanban.todo.slice(0, limits.todo).map(t => <TaskCard key={t.id} task={t} />)}
-                  {metrics.kanban.todo.length > limits.todo && <button className="btn-load-more" onClick={() => setLimits({ ...limits, todo: limits.todo + 30 })}>▼ Xem thêm 30 task</button>}
-                </div>
+          {/* 3. BẢNG KANBAN 3 CỘT (CÓ NÚT TẢI THÊM) */}
+          <div className="kanban-grid">
+            <div className="kanban-col">
+              <div className="col-header header-todo">CHƯA LÀM (TO DO) <span className="task-count">{metrics.kanban.todo.length}</span></div>
+              {metrics.kanban.todo.slice(0, limits.todo).map(t => <TaskCard key={t.id} task={t} />)}
+              {metrics.kanban.todo.length > limits.todo && <button className="btn-load-more" onClick={() => setLimits({ ...limits, todo: limits.todo + 30 })}>▼ Xem thêm 30 task</button>}
+            </div>
 
-                <div className="kanban-col">
-                  <div className="col-header header-progress">ĐANG LÀM (IN PROGRESS) <span className="task-count">{metrics.kanban.inProgress.length}</span></div>
-                  {metrics.kanban.inProgress.slice(0, limits.inProgress).map(t => <TaskCard key={t.id} task={t} />)}
-                  {metrics.kanban.inProgress.length > limits.inProgress && <button className="btn-load-more" onClick={() => setLimits({ ...limits, inProgress: limits.inProgress + 30 })}>▼ Xem thêm 30 task</button>}
-                </div>
+            <div className="kanban-col">
+              <div className="col-header header-progress">ĐANG LÀM (IN PROGRESS) <span className="task-count">{metrics.kanban.inProgress.length}</span></div>
+              {metrics.kanban.inProgress.slice(0, limits.inProgress).map(t => <TaskCard key={t.id} task={t} />)}
+              {metrics.kanban.inProgress.length > limits.inProgress && <button className="btn-load-more" onClick={() => setLimits({ ...limits, inProgress: limits.inProgress + 30 })}>▼ Xem thêm 30 task</button>}
+            </div>
 
-                <div className="kanban-col">
-                  <div className="col-header header-done">HOÀN THÀNH (DONE) <span className="task-count">{metrics.kanban.done.length}</span></div>
-                  {metrics.kanban.done.slice(0, limits.done).map(t => <TaskCard key={t.id} task={t} />)}
-                  {metrics.kanban.done.length > limits.done && <button className="btn-load-more" onClick={() => setLimits({ ...limits, done: limits.done + 30 })}>▼ Xem thêm 30 task</button>}
-                </div>
-              </div>
+            <div className="kanban-col">
+              <div className="col-header header-done">HOÀN THÀNH (DONE) <span className="task-count">{metrics.kanban.done.length}</span></div>
+              {metrics.kanban.done.slice(0, limits.done).map(t => <TaskCard key={t.id} task={t} />)}
+              {metrics.kanban.done.length > limits.done && <button className="btn-load-more" onClick={() => setLimits({ ...limits, done: limits.done + 30 })}>▼ Xem thêm 30 task</button>}
+            </div>
+          </div>
 
-              <div className="chart-box" style={{ marginTop: '0px' }}>
-                <h3 style={{ borderBottom: '1px solid #E2E8F0', paddingBottom: '16px', marginBottom: '0' }}>🔍 CHI TIẾT TỪNG TASK & DỰ BÁO AI</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                  <thead style={{ background: '#F8FAFC' }}>
-                    <tr>
-                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>MÃ TASK</th>
-                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>TÊN TASK</th>
-                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>LEAD TIME</th>
-                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>CYCLE TIME</th>
-                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>CHẤT LƯỢNG MÔ TẢ (NLP)</th>
-                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>DỰ BÁO AI ML</th>
+          {/* 4. BẢNG CHI TIẾT DỮ LIỆU */}
+          <div className="chart-box" style={{ marginTop: '0px' }}>
+            <h3 style={{ borderBottom: '1px solid #E2E8F0', paddingBottom: '16px', marginBottom: '0' }}>🔍 CHI TIẾT TỪNG TASK & DỰ BÁO AI</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead style={{ background: '#F8FAFC' }}>
+                <tr>
+                  <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>MÃ TASK</th>
+                  <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>TÊN TASK</th>
+                  <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>LEAD TIME</th>
+                  <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>CYCLE TIME</th>
+                  <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>CHẤT LƯỢNG MÔ TẢ (NLP)</th>
+                  <th style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>DỰ BÁO AI ML</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metrics.tasks.length > 0 ? (
+                  metrics.tasks.slice(0, limits.table).map((task, index) => (
+                    <tr key={index} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '16px', fontWeight: 'bold', color: '#3B82F6' }}>{task.id}</td>
+                      <td style={{ padding: '16px', fontWeight: '500', color: '#1E293B' }}>{task.title}</td>
+                      <td style={{ padding: '16px', color: '#64748B' }}>{task.leadTime?.toFixed(2)} d</td>
+                      <td style={{ padding: '16px', color: '#64748B' }}>{task.cycleTime?.toFixed(2)} d</td>
+                      <td style={{ padding: '16px', fontSize: '13px', fontWeight: '600', color: (task.nlpStatus?.includes('mơ hồ') || task.nlpStatus?.includes('ngắn') || task.nlpStatus?.includes('Trống')) ? '#EF4444' : '#10B981' }}>{task.nlpStatus || "Đang phân tích..."}</td>
+                      <td style={{ padding: '16px' }}>
+                        {task.aiRisk === 'High' ? <span style={{ background: '#FEE2E2', color: '#EF4444', padding: '6px 12px', borderRadius: '20px', fontWeight: '700', fontSize: '12px' }}>🔴 Rủi ro</span>
+                          : <span style={{ background: '#DCFCE7', color: '#10B981', padding: '6px 12px', borderRadius: '20px', fontWeight: '700', fontSize: '12px' }}>🟢 An toàn</span>}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {metrics.tasks.length > 0 ? (
-                      metrics.tasks.slice(0, limits.table).map((task, index) => (
-                        <tr key={index} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                          <td style={{ padding: '16px', fontWeight: 'bold', color: '#3B82F6' }}>{task.id}</td>
-                          <td style={{ padding: '16px', fontWeight: '500', color: '#1E293B' }}>{task.title}</td>
-                          <td style={{ padding: '16px', color: '#64748B' }}>{task.leadTime?.toFixed(2)} d</td>
-                          <td style={{ padding: '16px', color: '#64748B' }}>{task.cycleTime?.toFixed(2)} d</td>
-                          <td style={{ padding: '16px', fontSize: '13px', fontWeight: '600', color: (task.nlpStatus?.includes('mơ hồ') || task.nlpStatus?.includes('ngắn') || task.nlpStatus?.includes('Trống')) ? '#EF4444' : '#10B981' }}>{task.nlpStatus || "Đang phân tích..."}</td>
-                          <td style={{ padding: '16px' }}>
-                            {task.aiRisk === 'High' ? <span style={{ background: '#FEE2E2', color: '#EF4444', padding: '6px 12px', borderRadius: '20px', fontWeight: '700', fontSize: '12px' }}>🔴 Rủi ro</span>
-                              : <span style={{ background: '#DCFCE7', color: '#10B981', padding: '6px 12px', borderRadius: '20px', fontWeight: '700', fontSize: '12px' }}>🟢 An toàn</span>}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>Chưa có dữ liệu. Vui lòng kết nối dự án.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-                {metrics.tasks.length > limits.table && (
-                  <button className="btn-load-more" style={{ marginTop: '16px' }} onClick={() => setLimits({ ...limits, table: limits.table + 30 })}>▼ Xem thêm 30 dòng</button>
+                  ))
+                ) : (
+                  <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>Chưa có dữ liệu. Vui lòng kết nối dự án.</td></tr>
                 )}
-              </div>
-            </>
-          )}
+              </tbody>
+            </table>
+            {metrics.tasks.length > limits.table && (
+              <button className="btn-load-more" style={{ marginTop: '16px' }} onClick={() => setLimits({ ...limits, table: limits.table + 30 })}>▼ Xem thêm 30 dòng</button>
+            )}
+          </div>
+
         </div>
       </main>
     </div>
