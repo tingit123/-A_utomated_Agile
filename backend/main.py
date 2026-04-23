@@ -62,14 +62,16 @@ def analyze_nlp_description(issue):
     title = issue['title'].strip()
     body = issue.get('body') or ''
     
-    if not title or len(title) < 5: return "⚠️ Tiêu đề trống", False
-    if len(title.split()) < 3: return "⚠️ Tiêu đề quá ngắn", False
+    if not title or len(title) < 5: return "⚠️ Tieu de trong", False
+    title_words = len(title.split())
+    if title_words < 3: return "⚠️ Tieu de qua ngan", False
     
     body_length = len(body.strip())
-    if body_length == 0: return "⚠️ Mô tả trống", False
-    elif body_length < 20: return "⚠️ Mô tả quá ngắn", False
+    if body_length == 0: return "⚠️ Mo ta trong", False
+    elif body_length < 20: return "⚠️ Mo ta qua ngan", False
     
-    if len(issue.get('labels', [])) == 0: return "✓ Tương đối", True
+    label_count = len(issue.get('labels', []))
+    if label_count == 0: return "✓ Tuong doi", True
     
     body_lower = body.lower()
     has_steps = any(kw in body_lower for kw in ['step', 'bước', 'cách', 'how to', 'làm thế nào'])
@@ -83,12 +85,12 @@ def analyze_nlp_description(issue):
     if len(title) > 30: quality_score += 1
     if body_length > 100: quality_score += 1
     
-    if quality_score >= 4: return "✅ Chi tiết", True
-    elif quality_score >= 2: return "✓ Tương đối", True
-    else: return "⚠️ Mơ hồ", False
+    if quality_score >= 4: return "✅ Chi tiet", True
+    elif quality_score >= 2: return "✓ Tuong doi", True
+    else: return "⚠️ Mo ho", False
 
-# ========== HÀM BURNDOWN (CÓ AUTO-GROUPING) ==========
-def calculate_burndown_data(issues):
+# ========== HÀM BURNDOWN ==========
+def calculate_burndown_data(issues, start_project_date):
     tasks_by_date = defaultdict(lambda: {"closed": 0, "created": 0})
     all_dates = set()
     
@@ -98,93 +100,69 @@ def calculate_burndown_data(issues):
         created_at = datetime.strptime(issue['created_at'], "%Y-%m-%dT%H:%M:%SZ")
         created_date = created_at.date()
         all_dates.add(created_date)
-        tasks_by_date[created_date]["created"] += 1
+        tasks_by_date[created_date]["created"] += estimate_story_points(issue)
         
         if issue['state'] == 'closed' and issue['closed_at']:
             closed_at = datetime.strptime(issue['closed_at'], "%Y-%m-%dT%H:%M:%SZ")
             closed_date = closed_at.date()
             all_dates.add(closed_date)
-            tasks_by_date[closed_date]["closed"] += 1
+            tasks_by_date[closed_date]["closed"] += estimate_story_points(issue)
     
     burndown = []
     if all_dates:
-        min_date = min(all_dates)
+        min_date = start_project_date
         max_date = max(all_dates)
-        total_days = (max_date - min_date).days
-        
-        if total_days <= 40: step_days = 1
-        elif total_days <= 120: step_days = 3
-        elif total_days <= 300: step_days = 7
-        elif total_days <= 1200: step_days = 30
-        else: step_days = 90
+        if max_date < min_date: max_date = min_date
         
         tasks_remaining = 0
+        tasks_closed_cum = 0
         current_date = min_date
         
         while current_date <= max_date:
-            period_created = period_closed = 0
-            for i in range(step_days):
-                check_date = current_date + timedelta(days=i)
-                if check_date > max_date: break
-                if check_date in all_dates:
-                    period_created += tasks_by_date[check_date]["created"]
-                    period_closed += tasks_by_date[check_date]["closed"]
+            tasks_remaining += tasks_by_date[current_date]["created"]
+            tasks_remaining -= tasks_by_date[current_date]["closed"]
+            tasks_closed_cum += tasks_by_date[current_date]["closed"]
             
-            tasks_remaining += period_created
-            tasks_remaining -= period_closed
+            sprint_num = (current_date - start_project_date).days // 14 + 1
             
-            if step_days == 1 or step_days == 3: label = current_date.strftime("%d/%m/%Y")
-            elif step_days == 7: label = f"Tuần {current_date.isocalendar()[1]}/{current_date.year}"
-            else: label = current_date.strftime("Tháng %m/%Y")
-            
-            burndown.append({"date": label, "tasksRemaining": max(tasks_remaining, 0), "tasksClosed": period_closed})
-            current_date += timedelta(days=step_days)
+            burndown.append({
+                "date": current_date.strftime("%d/%m"),
+                "tasksRemaining": max(tasks_remaining, 0),
+                "tasksClosed": tasks_closed_cum,
+                "sprint": f"Sprint {sprint_num}"
+            })
+            current_date += timedelta(days=1)
             
     return burndown
 
-# ========== HÀM PRODUCTIVITY (CÓ AUTO-GROUPING) ==========
-def calculate_team_productivity(issues):
+# ========== HÀM PRODUCTIVITY ==========
+def calculate_team_productivity(issues, start_project_date):
     tasks_per_day = defaultdict(int)
-    all_dates = set()
+    max_date = start_project_date
     
     for issue in issues:
         if 'pull_request' in issue or issue['state'] != 'closed': continue
         if issue['closed_at']:
             closed_date = datetime.strptime(issue['closed_at'], "%Y-%m-%dT%H:%M:%SZ").date()
             tasks_per_day[closed_date] += 1
-            all_dates.add(closed_date)
+            if closed_date > max_date: max_date = closed_date
             
-    if not all_dates: return {"teamProductivity": 0, "tasksPerDay": []}
-        
-    min_date = min(all_dates)
-    max_date = max(all_dates)
-    total_days = (max_date - min_date).days
-    
-    if total_days <= 40: step_days = 1
-    elif total_days <= 120: step_days = 3
-    elif total_days <= 300: step_days = 7
-    elif total_days <= 1200: step_days = 30
-    else: step_days = 90
-    
     tasks_per_period_list = []
-    current_date = min_date
+    current_date = start_project_date
     total_completed = 0
+    total_days = (max_date - start_project_date).days + 1
     
     while current_date <= max_date:
-        period_closed = 0
-        for i in range(step_days):
-            check_date = current_date + timedelta(days=i)
-            if check_date > max_date: break
-            period_closed += tasks_per_day[check_date]
+        completed = tasks_per_day[current_date]
+        total_completed += completed
+        sprint_num = (current_date - start_project_date).days // 14 + 1
         
-        total_completed += period_closed
-        
-        if step_days == 1 or step_days == 3: label = current_date.strftime("%d/%m/%Y")
-        elif step_days == 7: label = f"Tuần {current_date.isocalendar()[1]}/{current_date.year}"
-        else: label = current_date.strftime("Tháng %m/%Y")
-        
-        tasks_per_period_list.append({"date": label, "completed": period_closed})
-        current_date += timedelta(days=step_days)
+        tasks_per_period_list.append({
+            "date": current_date.strftime("%d/%m"),
+            "completed": completed,
+            "sprint": f"Sprint {sprint_num}"
+        })
+        current_date += timedelta(days=1)
         
     avg_productivity = total_completed / max(total_days, 1)
     return {"teamProductivity": round(avg_productivity, 2), "tasksPerDay": tasks_per_period_list}
@@ -196,13 +174,12 @@ async def get_agile_metrics(owner: str, repo: str):
     
     issues = []
     page = 1
-    # PHÂN TRANG (PAGINATION) ĐỂ LẤY SẠCH DATA
     while True:
         url = f"https://api.github.com/repos/{owner}/{repo}/issues?state=all&per_page=100&page={page}"
         response = requests.get(url, headers=headers)
         
         if response.status_code != 200:
-            if page == 1: raise HTTPException(status_code=response.status_code, detail="Lỗi kết nối GitHub API")
+            if page == 1: raise HTTPException(status_code=response.status_code, detail="Loi ket noi GitHub API")
             break
             
         batch = response.json()
@@ -212,8 +189,15 @@ async def get_agile_metrics(owner: str, repo: str):
         page += 1
         time.sleep(0.2)
 
+    if not issues:
+        raise HTTPException(status_code=404, detail="Khong tim thay du lieu")
+
+    all_created_dates = [datetime.strptime(i['created_at'], "%Y-%m-%dT%H:%M:%SZ").date() for i in issues if 'pull_request' not in i]
+    start_project_date = min(all_created_dates) if all_created_dates else datetime.now().date()
+
     tasks = []
     kanban = {"todo": [], "inProgress": [], "done": []}
+    members_data = {} # Rổ hứng dữ liệu thành viên
     
     for issue in issues:
         if 'pull_request' in issue: continue
@@ -238,23 +222,29 @@ async def get_agile_metrics(owner: str, repo: str):
             lead_time = (closed_at - created_at).total_seconds() / (24 * 3600)
             cycle_time = max((closed_at - started_at).total_seconds() / (24 * 3600), 0.1)
             
-            bug_count = random.randint(0, 3)
             ai_risk = "Low"
             if risk_model:
                 try:
-                    prediction = risk_model.predict([[cycle_time, sp, bug_count]])
+                    prediction = risk_model.predict([[cycle_time, sp, random.randint(0, 3)]])
                     if prediction[0] == 1: ai_risk = "High"
                 except: pass
 
+            # --- KHẮC PHỤC LỖI TRỐNG THÀNH VIÊN ---
+            # Ưu tiên lấy 'assignee'. Nếu GitHub không có, lấy thẳng người tạo 'user'
+            member_info = issue.get('assignee') or issue.get('user')
+            if member_info:
+                login = member_info.get('login', 'Unknown')
+                avatar = member_info.get('avatar_url', '')
+                if login not in members_data:
+                    members_data[login] = {"name": login, "avatar": avatar, "sp": 0, "tasks": 0}
+                members_data[login]["sp"] += sp
+                members_data[login]["tasks"] += 1
+            # --------------------------------------
+
             task_detail = {
-                "id": f"#{issue['number']}",
-                "title": issue['title'],
-                "sp": sp,
-                "nlpStatus": nlp_status,
-                "leadTime": lead_time,
-                "cycleTime": cycle_time,
-                "aiRisk": ai_risk,
-                "dateClose": closed_at.strftime("%d/%m/%Y")
+                "id": f"#{issue['number']}", "title": issue['title'], "sp": sp,
+                "nlpStatus": nlp_status, "leadTime": lead_time, "cycleTime": cycle_time,
+                "aiRisk": ai_risk, "dateClose": closed_at.strftime("%d/%m/%Y")
             }
             tasks.append(task_detail)
             task_base.update(task_detail)
@@ -263,22 +253,18 @@ async def get_agile_metrics(owner: str, repo: str):
             if task_base["assignee"]: kanban["inProgress"].append(task_base)
             else: kanban["todo"].append(task_base)
 
-    if not tasks:
-        return {
-            "velocity": 0, "avgCycleTime": 0, "avgLeadTime": 0, "teamProductivity": 0,
-            "burndownData": [], "sprintHealth": "CHƯA CÓ DỮ LIỆU", "tasks": [], "kanban": kanban
-        }
-
-    df = pd.DataFrame(tasks)
-    total_velocity = int(df['sp'].sum())
-    avg_cycle = float(df['cycleTime'].mean())
-    avg_lead = float(df['leadTime'].mean())
+    df = pd.DataFrame(tasks) if tasks else pd.DataFrame()
+    total_velocity = int(df['sp'].sum()) if not df.empty else 0
+    avg_cycle = float(df['cycleTime'].mean()) if not df.empty else 0
+    avg_lead = float(df['leadTime'].mean()) if not df.empty else 0
     
-    productivity_data = calculate_team_productivity(issues)
-    burndown_data = calculate_burndown_data(issues)
+    productivity_data = calculate_team_productivity(issues, start_project_date)
+    burndown_data = calculate_burndown_data(issues, start_project_date)
     
-    high_risk_tasks = df[df['aiRisk'] == 'High'].shape[0]
-    sprint_health = "CÓ RỦI RO" if (high_risk_tasks / len(df)) > 0.3 else "AN TOÀN"
+    high_risk_tasks = df[df['aiRisk'] == 'High'].shape[0] if not df.empty else 0
+    sprint_health = "CO RUI RO" if not df.empty and (high_risk_tasks / len(df)) > 0.3 else "AN TOAN"
+    
+    available_sprints = sorted(list(set(item['sprint'] for item in burndown_data)), key=lambda x: int(x.split()[1]))
 
     return {
         "velocity": total_velocity,
@@ -287,9 +273,11 @@ async def get_agile_metrics(owner: str, repo: str):
         "teamProductivity": productivity_data["teamProductivity"],
         "tasksPerDay": productivity_data["tasksPerDay"],
         "burndownData": burndown_data,
+        "availableSprints": available_sprints,
         "sprintHealth": sprint_health,
         "tasks": tasks,
-        "kanban": kanban
+        "kanban": kanban,
+        "memberPerformance": list(members_data.values()) # Trả về mảng dữ liệu thành viên
     }
 
 if __name__ == "__main__":
