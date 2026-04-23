@@ -210,7 +210,7 @@ const Dashboard = () => {
                   placeholder="Dán link GitHub (VD: https://github.com/owner/repo)..."
                 />
                 <button className="btn-fetch" onClick={handleFetchMetrics} disabled={loading}>
-                  {loading ? "Đang xử lý (Chờ 5s)..." : "Kết nối Dữ liệu"}
+                  {loading ? "Đang xử lý..." : "Kết nối Dữ liệu"}
                 </button>
               </>
             ) : (
@@ -218,7 +218,8 @@ const Dashboard = () => {
                 <div className="connected-badge">
                   <span className="status-dot"></span> Đã kết nối GitHub: {connectedRepo}
                 </div>
-                <button className="btn-sync" onClick={handleFetchMetrics} disabled={loading}>
+                <button className="btn-sync" onClick={handleFetchMetrics} disab
+                led={loading}>
                   {loading ? "Đang đồng bộ..." : "🔄 Đồng bộ lại"}
                 </button>
               </>

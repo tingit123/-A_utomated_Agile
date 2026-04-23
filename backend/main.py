@@ -18,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN","")
 
 try:
     risk_model = joblib.load("models/sprint_risk_model.pkl")
@@ -93,33 +93,37 @@ def analyze_nlp_description(issue):
 def calculate_burndown_data(issues, start_project_date):
     tasks_by_date = defaultdict(lambda: {"closed": 0, "created": 0})
     all_dates = set()
+    total_created_sp = 0 # Lưu tổng số SP của toàn bộ dự án
     
     for issue in issues:
         if 'pull_request' in issue: continue
         
+        sp = estimate_story_points(issue)
+        
         created_at = datetime.strptime(issue['created_at'], "%Y-%m-%dT%H:%M:%SZ")
         created_date = created_at.date()
         all_dates.add(created_date)
-        tasks_by_date[created_date]["created"] += estimate_story_points(issue)
+        tasks_by_date[created_date]["created"] += sp
+        total_created_sp += sp # Cộng dồn để có đỉnh SP cao nhất lúc bắt đầu
         
         if issue['state'] == 'closed' and issue['closed_at']:
             closed_at = datetime.strptime(issue['closed_at'], "%Y-%m-%dT%H:%M:%SZ")
             closed_date = closed_at.date()
             all_dates.add(closed_date)
-            tasks_by_date[closed_date]["closed"] += estimate_story_points(issue)
-    
+            tasks_by_date[closed_date]["closed"] += sp
+            
     burndown = []
     if all_dates:
         min_date = start_project_date
         max_date = max(all_dates)
         if max_date < min_date: max_date = min_date
         
-        tasks_remaining = 0
+        tasks_remaining = total_created_sp # Biểu đồ bắt đầu từ Tổng lượng SP
         tasks_closed_cum = 0
         current_date = min_date
         
         while current_date <= max_date:
-            tasks_remaining += tasks_by_date[current_date]["created"]
+            # Trừ dần những task đã hoàn thành để đường thẳng cắm xuống
             tasks_remaining -= tasks_by_date[current_date]["closed"]
             tasks_closed_cum += tasks_by_date[current_date]["closed"]
             
@@ -197,7 +201,7 @@ async def get_agile_metrics(owner: str, repo: str):
 
     tasks = []
     kanban = {"todo": [], "inProgress": [], "done": []}
-    members_data = {} # Rổ hứng dữ liệu thành viên
+    members_data = {} 
     
     for issue in issues:
         if 'pull_request' in issue: continue
@@ -229,8 +233,6 @@ async def get_agile_metrics(owner: str, repo: str):
                     if prediction[0] == 1: ai_risk = "High"
                 except: pass
 
-            # --- KHẮC PHỤC LỖI TRỐNG THÀNH VIÊN ---
-            # Ưu tiên lấy 'assignee'. Nếu GitHub không có, lấy thẳng người tạo 'user'
             member_info = issue.get('assignee') or issue.get('user')
             if member_info:
                 login = member_info.get('login', 'Unknown')
@@ -239,7 +241,6 @@ async def get_agile_metrics(owner: str, repo: str):
                     members_data[login] = {"name": login, "avatar": avatar, "sp": 0, "tasks": 0}
                 members_data[login]["sp"] += sp
                 members_data[login]["tasks"] += 1
-            # --------------------------------------
 
             task_detail = {
                 "id": f"#{issue['number']}", "title": issue['title'], "sp": sp,
@@ -277,7 +278,7 @@ async def get_agile_metrics(owner: str, repo: str):
         "sprintHealth": sprint_health,
         "tasks": tasks,
         "kanban": kanban,
-        "memberPerformance": list(members_data.values()) # Trả về mảng dữ liệu thành viên
+        "memberPerformance": list(members_data.values())
     }
 
 if __name__ == "__main__":
