@@ -18,18 +18,76 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-import os
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 
 try:
     risk_model = joblib.load("models/sprint_risk_model.pkl")
-    print("✅ Đã tải thành công mô hình AI!")
+    print("Da tai thanh cong mo hinh AI!")
 except:
     risk_model = None
-    print("⚠️ Cảnh báo: Không tìm thấy file models/sprint_risk_model.pkl.")
+    print("Canh bao: Khong tim thay file models/sprint_risk_model.pkl.")
 
+# ========== HÀM HEURISTIC: ESTIMATE STORY POINTS ==========
+def estimate_story_points(issue):
+    for label in issue.get('labels', []):
+        if isinstance(label, dict):
+            label_name = label.get('name', '')
+            if label_name.upper().startswith('SP:'):
+                try: return int(label_name.split(':')[1].strip())
+                except: pass
+    
+    title_upper = issue['title'].upper()
+    labels_lower = [l['name'].lower() for l in issue.get('labels', []) if isinstance(l, dict)]
+    
+    if '[BUG]' in title_upper or 'bug' in labels_lower or 'type: bug' in labels_lower: base_sp = 2
+    elif '[DOCS]' in title_upper or '[DOC]' in title_upper or 'documentation' in labels_lower: base_sp = 1
+    elif '[FEAT]' in title_upper or '[FEATURE]' in title_upper or 'feature' in labels_lower: base_sp = 5
+    elif '[ENHANCE]' in title_upper or '[IMPROVEMENT]' in title_upper: base_sp = 5
+    elif '[CHORE]' in title_upper or 'chore' in labels_lower: base_sp = 1
+    else: base_sp = 3
+    
+    title_length = len(issue['title'])
+    if title_length > 60: base_sp += 2
+    elif title_length > 40: base_sp += 1
+    
+    comments_count = issue.get('comments', 0)
+    if comments_count > 20: base_sp += 3
+    elif comments_count > 10: base_sp += 2
+    elif comments_count > 5: base_sp += 1
+    
+    return min(max(base_sp, 1), 13)
 
-# ========== HÀM NÂNG CẤP: TÍNH BURNDOWN KÈM AUTO-GROUPING ==========
+# ========== HÀM NLP: ANALYZE DESCRIPTION QUALITY ==========
+def analyze_nlp_description(issue):
+    title = issue['title'].strip()
+    body = issue.get('body') or ''
+    
+    if not title or len(title) < 5: return "⚠️ Tiêu đề trống", False
+    if len(title.split()) < 3: return "⚠️ Tiêu đề quá ngắn", False
+    
+    body_length = len(body.strip())
+    if body_length == 0: return "⚠️ Mô tả trống", False
+    elif body_length < 20: return "⚠️ Mô tả quá ngắn", False
+    
+    if len(issue.get('labels', [])) == 0: return "✓ Tương đối", True
+    
+    body_lower = body.lower()
+    has_steps = any(kw in body_lower for kw in ['step', 'bước', 'cách', 'how to', 'làm thế nào'])
+    has_expected = any(kw in body_lower for kw in ['expect', 'should', 'kỳ vọng', 'nên'])
+    has_actual = any(kw in body_lower for kw in ['actual', 'current', 'hiện tại', 'thực tế'])
+    
+    quality_score = 0
+    if has_steps: quality_score += 1
+    if has_expected: quality_score += 1
+    if has_actual: quality_score += 1
+    if len(title) > 30: quality_score += 1
+    if body_length > 100: quality_score += 1
+    
+    if quality_score >= 4: return "✅ Chi tiết", True
+    elif quality_score >= 2: return "✓ Tương đối", True
+    else: return "⚠️ Mơ hồ", False
+
+# ========== HÀM BURNDOWN (CÓ AUTO-GROUPING) ==========
 def calculate_burndown_data(issues):
     tasks_by_date = defaultdict(lambda: {"closed": 0, "created": 0})
     all_dates = set()
@@ -54,21 +112,17 @@ def calculate_burndown_data(issues):
         max_date = max(all_dates)
         total_days = (max_date - min_date).days
         
-        # THUẬT TOÁN TỰ ĐỘNG CHIA GIAI ĐOẠN ĐỂ BIỂU ĐỒ LUÔN ĐẸP
-        if total_days <= 40: step_days = 1          # Theo ngày
-        elif total_days <= 120: step_days = 3       # 3 ngày/lần
-        elif total_days <= 300: step_days = 7       # Theo Tuần
-        elif total_days <= 1200: step_days = 30     # Theo Tháng
-        else: step_days = 90                        # Theo Quý
+        if total_days <= 40: step_days = 1
+        elif total_days <= 120: step_days = 3
+        elif total_days <= 300: step_days = 7
+        elif total_days <= 1200: step_days = 30
+        else: step_days = 90
         
         tasks_remaining = 0
         current_date = min_date
         
         while current_date <= max_date:
-            period_created = 0
-            period_closed = 0
-            
-            # Cộng dồn số task trong giai đoạn đó
+            period_created = period_closed = 0
             for i in range(step_days):
                 check_date = current_date + timedelta(days=i)
                 if check_date > max_date: break
@@ -79,26 +133,16 @@ def calculate_burndown_data(issues):
             tasks_remaining += period_created
             tasks_remaining -= period_closed
             
-            # Tạo nhãn đẹp cho trục X
-            if step_days == 1 or step_days == 3:
-                label = current_date.strftime("%d/%m/%Y")
-            elif step_days == 7:
-                label = f"Tuần {current_date.isocalendar()[1]}/{current_date.year}"
-            else:
-                label = current_date.strftime("Tháng %m/%Y")
+            if step_days == 1 or step_days == 3: label = current_date.strftime("%d/%m/%Y")
+            elif step_days == 7: label = f"Tuần {current_date.isocalendar()[1]}/{current_date.year}"
+            else: label = current_date.strftime("Tháng %m/%Y")
             
-            burndown.append({
-                "date": label,
-                "tasksRemaining": max(tasks_remaining, 0),
-                "tasksClosed": period_closed
-            })
-            
+            burndown.append({"date": label, "tasksRemaining": max(tasks_remaining, 0), "tasksClosed": period_closed})
             current_date += timedelta(days=step_days)
             
     return burndown
 
-
-# ========== HÀM NÂNG CẤP: TÍNH NĂNG SUẤT KÈM AUTO-GROUPING ==========
+# ========== HÀM PRODUCTIVITY (CÓ AUTO-GROUPING) ==========
 def calculate_team_productivity(issues):
     tasks_per_day = defaultdict(int)
     all_dates = set()
@@ -110,14 +154,12 @@ def calculate_team_productivity(issues):
             tasks_per_day[closed_date] += 1
             all_dates.add(closed_date)
             
-    if not all_dates:
-        return {"teamProductivity": 0, "tasksPerDay": []}
+    if not all_dates: return {"teamProductivity": 0, "tasksPerDay": []}
         
     min_date = min(all_dates)
     max_date = max(all_dates)
     total_days = (max_date - min_date).days
     
-    # Tương tự: Gom nhóm biểu đồ Năng suất
     if total_days <= 40: step_days = 1
     elif total_days <= 120: step_days = 3
     elif total_days <= 300: step_days = 7
@@ -141,27 +183,20 @@ def calculate_team_productivity(issues):
         elif step_days == 7: label = f"Tuần {current_date.isocalendar()[1]}/{current_date.year}"
         else: label = current_date.strftime("Tháng %m/%Y")
         
-        tasks_per_period_list.append({
-            "date": label,
-            "completed": period_closed
-        })
+        tasks_per_period_list.append({"date": label, "completed": period_closed})
         current_date += timedelta(days=step_days)
         
-    # Tính số lượng hoàn thành trung bình mỗi ngày (Để hiển thị ở thẻ Stats cho chuẩn)
     avg_productivity = total_completed / max(total_days, 1)
-    
-    return {
-        "teamProductivity": round(avg_productivity, 2),
-        "tasksPerDay": tasks_per_period_list
-    }
+    return {"teamProductivity": round(avg_productivity, 2), "tasksPerDay": tasks_per_period_list}
 
-
+# ========== MAIN ENDPOINT ==========
 @app.get("/api/metrics/{owner}/{repo}")
 async def get_agile_metrics(owner: str, repo: str):
     headers = {"Authorization": f"token {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
     
     issues = []
     page = 1
+    # PHÂN TRANG (PAGINATION) ĐỂ LẤY SẠCH DATA
     while True:
         url = f"https://api.github.com/repos/{owner}/{repo}/issues?state=all&per_page=100&page={page}"
         response = requests.get(url, headers=headers)
@@ -183,11 +218,8 @@ async def get_agile_metrics(owner: str, repo: str):
     for issue in issues:
         if 'pull_request' in issue: continue
         
-        sp = 0
-        for label in issue.get('labels', []):
-            if isinstance(label, dict) and label.get('name', '').startswith('SP:'):
-                try: sp = int(label['name'].split(':')[1].strip())
-                except: pass
+        sp = estimate_story_points(issue)
+        nlp_status, nlp_quality = analyze_nlp_description(issue)
 
         created_at = datetime.strptime(issue['created_at'], "%Y-%m-%dT%H:%M:%SZ")
         started_at = created_at + pd.Timedelta(days=1)
@@ -196,6 +228,7 @@ async def get_agile_metrics(owner: str, repo: str):
             "id": f"#{issue['number']}",
             "title": issue['title'],
             "sp": sp,
+            "nlpStatus": nlp_status,
             "dateOpen": created_at.strftime("%d/%m/%Y"),
             "assignee": issue['assignee']['login'] if issue['assignee'] else None
         }
@@ -208,13 +241,16 @@ async def get_agile_metrics(owner: str, repo: str):
             bug_count = random.randint(0, 3)
             ai_risk = "Low"
             if risk_model:
-                prediction = risk_model.predict([[cycle_time, sp, bug_count]])
-                if prediction[0] == 1: ai_risk = "High"
+                try:
+                    prediction = risk_model.predict([[cycle_time, sp, bug_count]])
+                    if prediction[0] == 1: ai_risk = "High"
+                except: pass
 
             task_detail = {
                 "id": f"#{issue['number']}",
                 "title": issue['title'],
                 "sp": sp,
+                "nlpStatus": nlp_status,
                 "leadTime": lead_time,
                 "cycleTime": cycle_time,
                 "aiRisk": ai_risk,
